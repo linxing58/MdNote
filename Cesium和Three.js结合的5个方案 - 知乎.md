@@ -1,0 +1,673 @@
+# Cesium和Three.js结合的5个方案 - 知乎
+欢迎关注微信公号【**三维网格 3D**】，第一时间获取最新文章
+
+`CesiumJS`是一个开源、免费的三维地图开发框架，`Three.js`是一个也开源、免费的 3D 渲染框架，两者都是基于 WebGL 技术、使用 JavaScript 开发的 Web 前端三维可视化框架，在国内外应用非常广泛。本篇我们来聊聊`Cesium`+`Three.js`的几种方案，结合实际应用效果来分析各个方案的优点和缺点，以便项目中快速做出技术路线和方案选择。
+
+### 1、Cesium 和 Three.js 简单对比
+
+`Cesium`可视化内容以地理空间数据为主，如卫星影像、地形、城市级三维模型等，数据量和空间范围都非常大，而对精度要求更高，所以其核心优势是高性能、高精度、规范标准，规范标准体现在遵循行业标准和主导制定 3D Tiles 标准上。
+
+![](https://pic2.zhimg.com/v2-21aeba77604167c1d4c27c8af6cc8429_b.jpg)
+
+cesium 官网
+
+`Three.js`的目标则是构建一个易于使用、轻量级、跨浏览器的通用 3D 渲染框架，核心数据是 3D 对象和三维模型，视觉呈现、场景组织、3D 对象管理、动画、可扩展性等方面有独特的优势，且可以于物理引擎很好的结合使用，在大屏三维展示、游戏、仿真等方面很有应用价值。
+
+![](https://pic4.zhimg.com/v2-24c84a789f174287e9746c8a167eb313_b.jpg)
+
+three.js 官网
+
+相比之下，`Cesium`更像是一个高级餐厅，下单即可坐享其成；而`Three.js`更像是一个厨房，厨具、食材甚至菜谱都备齐，就等你来发挥厨艺。
+
+### 2、探索融合之路
+
+写到这里，不禁要回望一下自己这几年执着地探索两个引擎融合的历程。
+
+### 2.1、将 Three.js 场景当作模型加载
+
+早在 2017 年初，接触`Cesium`近两年，又写了一段时间`Three.js`，对`Cesium`只支持 gltf 格式模型这一点不满，看到`Three.js`社区有很多模型格式的插件，便萌生了`Cesium`和`Three.js`结合的想法。
+
+折腾大概两周，实现了第一个方案，先使用`GLTFExporter`将`Three.js`场景导出为 gltf 格式，然后通过加载 gltf 模型的方式，总算是把`Three.js`解析的模型加载到`Cesium`场景中了。
+
+很快就发现这种做法的致命缺点：加载极慢，且不支持动画！
+
+### 2.2、实现基于 Cesium 的 Three.js 渲染器
+
+没过多久，开始读`Three.js`渲染器的源码，再加上对`Cesium`底层的一知半解，心里似乎很有底气了，开始了新的探索，参照`Three.js`的`WebGLRenderer`、`CanvasRenderer`、`SVGRenderer`，动手写一个`Cesium`Renderer，还将源码传到了 GitHub，还起了一个很牛的名字`Cesium`3js（ [https://github.com/MikesWei/](https://link.zhihu.com/?target=https%3A//github.com/MikesWei/)`Cesium`3js ），这也是我上传的第一个开源项目。
+
+想法很大，名头也很大，也实现了当时预期的效果，前面一个方案的缺点一定程度上已经弥补了，但是和真正渲染器差点不是一星半点，绝大部分的特性，都没有支持。
+
+几个月后，`Cesium`官方博客上那篇介绍`Cesium`与`Three.js`集成方法的文章 ( 《Integrating `Cesium` with `Three.js`》[https://cesium.com/blog/2017/10/23/integrating-cesium-with-threejs/](https://link.zhihu.com/?target=https%3A//cesium.com/blog/2017/10/23/integrating-cesium-with-threejs/) ) 发表了。
+
+### 2.3、在 Cesium 实现 Three.js 部分接口
+
+2017 年底，换了新工作，有个项目需要将天气雷达三维数据展示在三维地球中，最好是实现体积渲染。寻寻觅觅，最终还是在`Three.js`社区找到了资源。有了项目需求驱动，我更清楚自己做`Cesium`和`Three.js`结合的目的，于是将`Cesium`3js 代码重新整理，放弃了在`Cesium`上使用`Three.js`所有功能的想法，甚至直接不用依赖`Three.js`，而是在`Cesium`中实现类似`Three.js`的 Mesh 和 Material 的一套接口和渲染机制，支持部分`Three.js`对象。半年后将其开源，这便是我的第三个开源项目`CesiumMeshVisualizer` （ [https://github.com/MikesWei/CesiumMeshVisualizer](https://link.zhihu.com/?target=https%3A//github.com/MikesWei/CesiumMeshVisualizer) ）。承蒙同行不吝点赞，目前收获了`454`个 Star,`156`次 Fork。
+
+### 2.4、将融合进行到底
+
+2020 年夏，GIS 平台和游戏引擎融呈现不可挡的趋势，超图、`Cesium`等都相继推出虚幻引擎（Unreal Engine）插件。我们接到的需求，除了 “静止” 的海量数据调度外，场景中 “运动” 的物体也呈数量级增长，数据更新频率更高，更新的部件粒度也更细，用户三维场景的视觉效果要求更高，`Cesium`在这方面的能力明显不足。我们看到`Three.js`在解决这类需求具有极大的潜力，并在 2020 年底实现了`Cesium`与`Three.js`深度融合方案，真正实现了基于`Cesium`的`Three.js`渲染器，让`Cesium`、`Three.js`两个场景浑然一体！  
+
+![](https://pic4.zhimg.com/v2-c52134a720269dacb487421d4c9840f3_b.jpg)
+
+### 3、方案效果对比及分析
+
+从我们的探索历程可以看出，融合的方案很多，可以分为两类：
+
+-   两个场景叠加，使用两个相互隔离的绘图上下文（context），WebGL 层也没有任何交集，这类我们称之为 “两个画布” 方案；
+-   两个场景共用一个绘图上下文（context），WebGL 层有交集，这类我们称之为 “一个画布” 方案。
+
+两类方案中又有很多具体的实现方案，下面基于我们现有的技术，通过实际代码，看看几个方案的效果。
+
+### 3.1、小窗叠加显示 three.js 场景
+
+此方案以`Cesium`创建的三维地图为主，展示宏观的地理空间场景，点击到地图上某个要素时，弹出小窗使用 three.js 展示诸如室内、设备详细结构、零部件等。两个场景只在业务逻辑上有关联，完全可以独立开发，最后进行集成，属于 “两个画布” 类。
+
+下面通过一个简单的示例演示这个方案的主要流程。
+
+HTML 代码很简单，创建两个场景的容器，然后引入`Cesium`的 js 和 css 文件，`Three.js`通过 import 导入。
+
+```text
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1.小窗叠加显示three.js场景</title>
+    <style>
+        html,body{
+            margin: 0;
+            padding: 0;
+        }
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+        }
+        #threeContainer{
+            width: 20%;
+            height: 30%;
+            position: absolute;
+            z-index: 2;
+            top: 0%;
+        }
+    </style>
+</head>
+<body>
+    <div id="cesiumContainer"></div>
+    <div id="threeContainer"></div>
+
+    <link rel="stylesheet" href="../node_modules/@mesh-3d/cesium/Build/`Cesium`/Widgets/widgets.css">
+    <script src="../node_modules/@mesh-3d/cesium/Build/`Cesium`/Cesium.js"></script>
+    <script src="./index.js" type="module"></script>
+</body>
+</html>
+
+```
+
+JavaScript 代码主要做几件事：
+
+-   创建两个场景显示器
+-   `Cesium`场景添加一个球体；
+-   `Three.js`场景添加一个圆环节；
+-   点击`Cesium`场景的球体，弹窗显示`Three.js`场景。
+
+```text
+import * as THREE from "@mesh-3d/three";
+import MeBaseViewer from "@mesh-3d/core/Source/MeBaseViewer";
+ 
+//创建three.js显示器
+var viewer3js = new MeBaseViewer({
+    container: 'threeContainer',
+    background: 'black',
+    //默认不显示，点击到球体再显示
+    visible: false
+})
+//改变相机的视锥体远端截面与视点间的距离，避免坐标范围太大而被裁剪掉
+viewer3js.camera.far = 1000000000
+
+var geometry = new THREE.TorusKnotBufferGeometry(1000, 320, 128);
+var material = new THREE.MeshStandardMaterial({
+    color: 'gray'
+});
+geometry.computeBoundingSphere()
+var mesh = new THREE.Mesh(geometry, material)
+//添加到three.js场景
+viewer3js.add(mesh)
+
+//将相机定位到3D网格
+viewer3js.setView(mesh, {
+    heading: 45,
+    pitch: 45
+})
+
+//添加坐标轴辅助线
+viewer3js.scene.add(new THREE.AxesHelper(10000));
+
+//添加光源
+var light = new THREE.PointLight()
+viewer3js.camera.add(light)
+viewer3js.add(viewer3js.camera)
+
+
+//地图默认视野调整到中国
+Cesium.Camera.DEFAULT_VIEW_RECTANGLE = Cesium.Rectangle.fromDegrees(
+    70, -1, 140, 60
+);
+//创建cesium显示器（地球组件）
+var viewer = new Cesium.Viewer('cesiumContainer', {
+    creditContainer: document.createElement('div')
+})
+//Cesium添加球体
+var entity=viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(106.643932721321, 26.623618804165, 0),
+    ellipsoid: {
+        radii: new Cesium.Cartesian3(100, 100, 100)
+    }
+})
+viewer.flyTo(entity)
+//点击球体时显示Three.js场景
+viewer.screenSpaceEventHandler.setInputAction(e => {
+    var picked = viewer.scene.pick(e.position)
+    if (picked && picked.id) {
+        viewer3js.visible = true
+    } else {
+        viewer3js.visible = false
+    }
+}, Cesium.ScreenSpaceEventType.LEFT_CLICK)
+
+```
+
+效果视频：
+
+### 3.2、在 Three.js 中使用 Cesium
+
+如果只是需要使用`Cesium`的部分 GIS 功能，比如坐标，几何体，太阳位置及照射方向等，那么可以只创建`Three.js`场景，场景中的几何体的顶点位置坐标、3D 对象位置等由`Cesium`计算，使得`Three.js`的场景具备了地理空间表达的能力。
+
+下面演示用`Three.js`展示一个地球，并加载海陆模板 geojson，几何体由`Cesium`创建。
+
+```text
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2.在three.js中使用cesium</title>
+    <style>
+        html,body{
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <script src="../node_modules/@mesh-3d/cesium/Build/`Cesium`/Cesium.js"></script>
+    <script src="./index.js" type="module"></script>
+</body>
+</html>
+
+```
+
+JavaScript 代码关键点：
+
+-   使用`Cesium`创建基于 WGS84 坐标的几何体；
+-   将`Cesium`几何体转为`Three.js`几何体；
+-   创建材质和 3D 网格；
+-   3D 网格绕 x 轴旋转 90 度，完成从 y-up 到 z-up 变换。
+
+```text
+import * as THREE from "@mesh-3d/three";
+import GeometryUtils from "@mesh-3d/core/Source/GeometryUtils";
+import MeBaseViewer from "@mesh-3d/core/Source/MeBaseViewer";
+window.THREE = THREE;
+
+//创建three.js显示器
+var viewer3js = new MeBaseViewer({
+    container: document.body,
+    stats: true,
+    background: 'black'
+})
+//改变相机的视锥体远端截面与视点间的距离，避免坐标范围太大而被裁剪掉
+viewer3js.camera.far = 1000000000
+
+/**
+ * 使用`Cesium`创建基于WGS84坐标的几何体
+ * @param {geojson.Polygon} polygon 
+ * @returns {Cesium.PolygonGeometry}
+ */
+function createPolygonGeometry(polygon) {
+    var positions = polygon.coordinates[0].map(coord => {
+        return Cesium.Cartesian3.fromDegrees(coord[0], coord[1])
+    })
+    var holes = [];
+    for (let i = 1; i < polygon.coordinates.length; i++) {
+        var hole = polygon.coordinates[i].map(coord => {
+            return Cesium.Cartesian3.fromDegrees(coord[0], coord[1])
+        })
+        holes.push(new Cesium.PolygonHierarchy(hole))
+    }
+    var polygonHierarchy = new Cesium.PolygonHierarchy(positions, holes)
+    var geom = new Cesium.PolygonGeometry({
+        polygonHierarchy: polygonHierarchy,
+        granularity: Cesium.Math.toRadians(1)
+    })
+    geom = Cesium.PolygonGeometry.createGeometry(geom);
+
+    return geom;
+}
+
+//加载海陆模板
+Cesium.Resource.fetchJson('./sealand.geojson').then(json => {
+    var root = new THREE.Object3D();
+
+    json.features.forEach(feature => {
+        //使用`Cesium`创建基于WGS84坐标的几何体
+        var geometry = createPolygonGeometry(feature.geometry);
+        //将`Cesium`几何体转为three.js几何体
+        var geometry3js = GeometryUtils.toBufferGeometry3js(geometry);
+        //创建材质和3D网格
+        var material = new THREE.MeshBasicMaterial({
+            color: 'gray'
+        })
+        var mesh = new THREE.Mesh(geometry3js, material);
+        //绕x轴旋转90度，从y-up到z-up
+        mesh.rotation.x = -Math.PI / 2;
+        root.add(mesh)
+    })
+
+    //添加到three.js场景
+    viewer3js.add(root)
+ 
+})
+
+//使用Cesium创建基于WGS84坐标的几何体
+var geometry = new Cesium.EllipsoidGeometry({
+    radii: Cesium.Ellipsoid.WGS84.radii,
+    stackPartitions: 64,
+    slicePartitions: 64
+})
+geometry = Cesium.EllipsoidGeometry.createGeometry(geometry)
+//将Cesium几何体转为three.js几何体
+geometry = GeometryUtils.toBufferGeometry3js(geometry)
+//创建材质和3D网格
+var mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
+    wireframe: true,
+    color: 'gray'
+}));
+//绕x轴旋转90度，从y-up到z-up
+mesh.rotation.x = -Math.PI / 2
+//添加到three.js场景
+viewer3js.add(mesh)
+
+//将视野调整到中国
+viewer3js.setView(mesh,  {
+    heading: 200,
+    pitch: 105
+});
+
+//添加坐标轴辅助线
+viewer3js.scene.add(new THREE.AxesHelper(10000000));
+
+
+```
+
+效果视频：
+
+这个方案以`Three.js`为主，属于 “一个画布” 类，相当于基于`Three.js`构建一个简单的三维地图应用了，`Cesium`在这个方案中没有那么重要，完全可以用其他计算库替代，进而完全从头构建一个基于`Three.js`的三维地图框架，`iTowns`（ [https://github.com/iTowns/itowns](https://link.zhihu.com/?target=https%3A//github.com/iTowns/itowns) ）就是这么做的。
+
+### 3.3、将`Three.js`场景当作模型加载
+
+用`Three.js`组织场景，完成 3D 对象创建，gltf 之外的其他格式模型解析，然后整体导出为 gltf，最后使用 Cesium.Model 展示模型，属于 “一个画布” 类。
+
+HTML 代码也只是引用 js、css 文件，场景容器直接用 body。
+
+```text
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3.将three.js场景当作模型加载</title>
+    <style>
+        html,body{
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <link rel="stylesheet" href="../node_modules/@mesh-3d/cesium/Build/`Cesium`/Widgets/widgets.css">
+    <script src="../node_modules/@mesh-3d/cesium/Build/`Cesium`/Cesium.js"></script>
+    <script src="./index.js" type="module"></script>
+</body>
+</html>
+JavaScript代码也很简单，为了和其他方案对比，我们禁用碰撞检测，允许Cesium相机穿透物体和进入地下，开启地形深度测试，看看地形是不是正常的遮挡Three.js导出的gltf模型。
+
+import * as THREE from "@mesh-3d/three";
+import { GLTFExporter } from '@mesh-3d/three/examples/jsm/exporters/GLTFExporter'
+
+Cesium.Camera.DEFAULT_VIEW_RECTANGLE = Cesium.Rectangle.fromDegrees(
+    70, -1, 140, 60
+);
+//创建`Cesium`显示器（地球组件）
+var viewer = new Cesium.Viewer(document.body, {
+    creditContainer: document.createElement('div')
+});
+//禁用碰撞检测，允许`Cesium`相机穿透物体和进入地下
+viewer.scene.screenSpaceCameraController.enableCollisionDetection = false
+//开启地形深度测试
+viewer.scene.globe.depthTestAgainstTerrain=true
+
+//搭建three.js场景
+
+var scene = new THREE.Scene()
+var geometry = new THREE.TorusKnotBufferGeometry(1000, 320, 128);
+var material = new THREE.MeshStandardMaterial({
+    color: 'gray'
+});
+geometry.computeBoundingSphere()
+var box = new THREE.Mesh(geometry, material)
+box.position.set(0, geometry.boundingSphere.radius, 0)
+scene.add(box)
+
+//将three.js场景导出为gltf
+var exporter = new GLTFExporter()
+exporter.parse(scene, gltf => {
+
+    //加载导出的gltf模型
+
+    //创建模型变换矩阵，设置模型在地球上的位置、旋转、缩放等参数
+    var origin = Cesium.Cartesian3.fromDegrees(106.643932721321, 26.623618804165, 0);
+    var modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(origin);
+
+    var model = new Cesium.Model({
+        gltf: gltf,
+        modelMatrix: modelMatrix
+    });
+    viewer.scene.primitives.add(model);
+
+    //加载完成后，将相机定位到该模型
+    model.readyPromise.then(model => {
+        var boundingSphere = model.boundingSphere.clone();
+        Cesium.Matrix4.multiplyByPoint(model.modelMatrix, boundingSphere.center, boundingSphere.center);
+        viewer.camera.flyToBoundingSphere(boundingSphere)
+    })
+})
+```
+
+其实毫无疑问，导出的 gltf 和普通的模型一样，遮挡关系必然时正常的，但是这个方案的限制很多，`Three.js`在这里相当于模型格式转换工具。
+
+### 3.4、`Three.js`和`Cesium`相机同步
+
+这是`Cesium`官方博客文章介绍的方案，属于 “两个画布” 类，`Cesium`创建的地球作为底图，以地图上一个点原点建立局部坐标系，`Three.js`场景基于此坐标系叠加到`Cesium`场景中，在`Cesium`帧渲染前同步两个场景的相机，之后`Three.js`场景搭建就和一般的`Three.js`应用搭建一样了。
+
+HTML 创建两个场景的容器，引入`Cesium`的 js、css 文件。
+
+```text
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4.three.js和cesium相机同步</title>
+    <style>
+        html,body{
+            margin: 0;
+            padding: 0;
+        }
+        #cesiumContainer,
+        #threeContainer{
+            width: 100%;
+            height: 100%;
+        }
+        #threeContainer{
+            position: absolute;
+            z-index: 2;
+            top: 0%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="cesiumContainer"></div>
+    <div id="threeContainer"></div>
+
+    <link rel="stylesheet" href="../node_modules/@mesh-3d/cesium/Build/`Cesium`/Widgets/widgets.css">
+    <script src="../node_modules/@mesh-3d/cesium/Build/`Cesium`/Cesium.js"></script>
+    <script src="./index.js" type="module"></script>
+</body>
+</html>
+
+```
+
+JavaScript 代码关键点：
+
+-   创建模型变换矩阵，设置整个`Three.js`场景在地球上的位置、旋转、缩放等参数；
+-   使用模型变换矩阵构建局部坐标系；
+-   监听`Cesium`场景 preRender 事件，将`Cesium`相机转为`Three.js`相机，并渲染`Three.js`场景。
+
+```text
+import * as THREE from "@mesh-3d/three";
+import MeBaseViewer from "@mesh-3d/core/Source/MeBaseViewer";
+import CameraUtils from "@mesh-3d/core/Source/CameraUtils";
+window.THREE = THREE
+
+Cesium.Camera.DEFAULT_VIEW_RECTANGLE = Cesium.Rectangle.fromDegrees(
+    70, -1, 140, 60
+);
+
+//创建`Cesium`显示器（地球组件）
+var viewer = new Cesium.Viewer('cesiumContainer', {
+    creditContainer: document.createElement('div')
+});
+//禁用碰撞检测，允许`Cesium`相机穿透物体和进入地下
+viewer.scene.screenSpaceCameraController.enableCollisionDetection = false
+//开启地形深度测试
+viewer.scene.globe.depthTestAgainstTerrain = true
+
+//创建three.js显示器
+var viewer3js = new MeBaseViewer({
+    container: 'threeContainer',
+    autoRender: false
+})
+
+//搭建three.js场景
+
+var geometry = new THREE.TorusKnotBufferGeometry(1000, 320, 128);
+var material = new THREE.MeshStandardMaterial({
+    color: 'gray'
+});
+geometry.computeBoundingSphere()
+var mesh = new THREE.Mesh(geometry, material)
+viewer3js.scene.add(mesh)
+
+//添加坐标轴辅助线
+viewer3js.scene.add(new THREE.AxesHelper(10000));
+
+//添加光源
+var light = new THREE.PointLight()
+viewer3js.camera.add(light)
+viewer3js.add(viewer3js.camera)
+
+//同步相机
+
+//创建模型变换矩阵，设置整个three.js场景在地球上的位置、旋转、缩放等参数。
+var origin = Cesium.Cartesian3.fromDegrees(106.643932721321, 26.623618804165, 0);
+//这里不用eastNorthUpToFixedFrame是因为three.js场景默认y轴朝上
+var modelMatrix = Cesium.Transforms.northUpEastToFixedFrame(origin);
+
+//使用模型变换矩阵构建局部坐标系
+var referenceFrame = {
+    /**
+     * 从three.js相机到`Cesium`相机转换时使用
+     */
+    matrix: modelMatrix,
+    /**
+     * 从`Cesium`相机到three.js相机转换时使用。
+     * 如果modelMatrix不变，则逆矩阵可以不给定；modelMatrix变化时需要同时更新逆矩阵
+     */
+    inverseMatrix: Cesium.Matrix4.inverse(modelMatrix, new Cesium.Matrix4())
+};
+
+viewer.scene.preRender.addEventListener(() => {
+    //同步相机：将`Cesium`相机转为three.js相机
+    CameraUtils.toPerspectiveCamera3js(viewer.camera, viewer3js.camera, referenceFrame);
+
+    //执行three.js场景渲染
+    viewer3js.render()
+})
+
+//将`Cesium`相机定位到three.js场景
+var boundingSphere = Cesium.BoundingSphere.clone(geometry.boundingSphere)
+Cesium.Matrix4.multiplyByPoint(modelMatrix, boundingSphere.center, boundingSphere.center);
+viewer.camera.flyToBoundingSphere(boundingSphere)
+
+```
+
+效果视频：
+
+这个方案和第一个方案很像，唯一不同在于是否相机同步。  
+
+最大优点是可以完全使用所有`Three.js`的特性，而且看上去很有融合的效果，也因为没有更好的其他方案，所以目前在网上流传甚广。
+
+缺点主要是两个场景绘图上下文（context）完全分离的，遮挡关系、光照、阴影、后期特效、交互等等都是两套东西，并没有真正的融合。
+
+### 3.5、Cesium 和 Three.js 深度融合
+
+`Cesium`和`Three.js`都是经过 10 年打磨的引擎，渲染器这层已经相对稳定了，所以这个方案便是从渲染器层着手，其基本原理是，用`Cesium`的 DrawCommand 来接替`Three.js`渲染器的部分工作；具体做法就是实现一个基于 Cesium.DrawCommand 的`Three.js`渲染器，让`Three.js`真正融入`Cesium`的渲染流程和上下文，和`Cesium`的其他对象一起进入 GPU 完成绘制。
+
+我们先看一个简单的例子。
+
+```text
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5.cesium和three.js深度融合</title>
+    <style>
+        html,body{
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <link rel="stylesheet" href="../node_modules/@mesh-3d/cesium/Build/`Cesium`/Widgets/widgets.css">
+    <script src="../node_modules/@mesh-3d/cesium/Build/`Cesium`Unminified/Cesium.js"></script>
+    <script src="./index.js" type="module"></script>
+</body>
+</html>
+
+```
+
+JavaScript 主要做几件事：
+
+-   创建`Cesium`场景，开启阴影和地形深度测试，禁用碰撞检测；
+-   使用 Cesium.Entity 创建两个实体，颜色为天蓝色，开启阴影；
+-   搭建`Three.js`场景，创建一个圆环节，颜色为灰色，开启阴影；
+-   创建基于`Cesium`的`Three.js`显示器，加入`Cesium`场景的 primitives；
+-   设置`Three.js`显示器，使用`Cesium`太阳光作为`Three.js`场景光源。
+
+```text
+import * as THREE from "@mesh-3d/three";
+import { MeshVisualizer } from "@mesh-3d/core";
+window.THREE = THREE
+
+Cesium.Camera.DEFAULT_VIEW_RECTANGLE = Cesium.Rectangle.fromDegrees(
+    70, -1, 140, 60
+);
+
+//创建`Cesium`显示器（地球组件）
+var viewer = new Cesium.Viewer(document.body, {
+    creditContainer: document.createElement('div')
+});
+//禁用碰撞检测，允许`Cesium`相机穿透物体和进入地下
+viewer.scene.screenSpaceCameraController.enableCollisionDetection = false
+//开启地形深度测试
+viewer.scene.globe.depthTestAgainstTerrain = true
+
+//用Cesium.Entity方式添加球体，并接收/投射阴影
+viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(106.643932, 26.6238, 5),
+    ellipsoid: {
+        radii: new Cesium.Cartesian3(5, 5, 5),
+        shadows: Cesium.ShadowMode.ENABLED,
+        material:Cesium.Color.SKYBLUE
+    }
+})
+//用Cesium.Entity方式添加立方体，并接收/投射阴影
+viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(106.64445, 26.6232, 25),
+    box: {
+        dimensions: new Cesium.Cartesian3(5, 5, 50),
+        shadows: Cesium.ShadowMode.ENABLED,
+        material:Cesium.Color.SKYBLUE
+    }
+})
+
+//搭建three.js场景
+var scene3js = new THREE.Scene()
+
+var geometry = new THREE.TorusKnotBufferGeometry(10, 3, 128);
+var material = new THREE.MeshStandardMaterial({
+    color: 'gray'
+});
+geometry.computeBoundingSphere()
+var mesh = new THREE.Mesh(geometry, material)
+scene3js.add(mesh)
+//接收/投射阴影
+mesh.castShadow = true
+mesh.receiveShadow = true
+
+//添加坐标轴辅助线
+scene3js.add(new THREE.AxesHelper(10000));
+
+//创建基于cesium的three.js显示器
+
+//创建模型变换矩阵，设置整个three.js场景在地球上的位置、旋转、缩放等参数。
+var origin = Cesium.Cartesian3.fromDegrees(106.643932721321, 26.623618804165, geometry.boundingSphere.radius / 2);
+var modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(origin);
+var visualizer = new MeshVisualizer({
+    modelMatrix: modelMatrix
+})
+//将three.js显示器加入cesium场景
+viewer.scene.primitives.add(visualizer);
+//cesium太阳光作为局部场景的光源
+visualizer.useSunLight = true;
+viewer.shadowMap.enabled = true
+viewer.shadowMap.maximumDistance = 1000000
+
+//添加three.js场景
+visualizer.add(scene3js)
+
+//将`Cesium`相机定位到three.js场景
+var boundingSphere = Cesium.BoundingSphere.clone(geometry.boundingSphere)
+visualizer.localToWorldCoordinates(boundingSphere.center, boundingSphere.center, scene3js.up)
+viewer.camera.flyToBoundingSphere(boundingSphere)
+
+```
+
+效果视频：
+
+可以看出：  
+
+-   遮挡关系正确：无论是两个 Entity 还是地形都可以把`Three.js`创建的圆环节遮挡；
+-   光照同步正常：两个场景的物体都可以同步接收太阳光；
+-   阴影关系正确：Entity 的阴影可以投射到圆环节上，圆环节的阴影也可以投射到 Entity 上。
+
+这就是这个方案的独特优势，实现了真正的深度融合。
+
+这里的深度不仅指两个场景`“深度缓冲区” 统一`这一层含义，更有渲染通道、光照、阴影、透明、半透明混合（`Cesium`的 translucent 不只是等同于`Three.js`的 transparent）、贴地、后期特效等等的统一。
+
+> “深度缓冲区” 统一，可以通过修改`Three.js`渲染器，让`Cesium`和`Three.js`共享 context，达到共享深度缓冲区的目的，一定程度上解决了遮挡关系的问题。  
+> 而渲染通道、光照、阴影、透明、半透明混合（`Cesium`的 translucent 不只是等同于`Three.js`的 transparent）、贴地、后期特效等等的统一，仅通过共享 context 是远远达不到的。
+
+这个方案的缺点是不能直接使用`Three.js`的后期特效代码，后期特效统一使用`Cesium`的后期处理机制，也是为了确保两个场景在后期特效上的统一，部分常用的`Three.js`社区特有的后期特效，如`OutlinePass`(3D 描边)、`UnrealBloomPass`(泛光特效)、`SMAAPass`(另一种抗锯齿算法) 等，我们已经实现了`Cesium`版本，且在不使用`Cesium`+`Three.js`的情况下也可以单独使用，一定程度上弥补了方案的一大缺点。
+
+> 从`Three.js`迁移到`Cesium`的后期特效，前几期文章就已经介绍过了，感兴趣的可以回顾一下。
+
+### 3.6、更多深度融合示例
+
+`Cesium`和`Three.js`深度融合方案经过一年的应用、更新和完善，示例覆盖了`Three.js`绝大部分特性，还增加了许多优化的特性。
+
+欢迎关注微信公号【**三维网格 3D**】，第一时间获取最新文章 
+ [https://zhuanlan.zhihu.com/p/441682100](https://zhuanlan.zhihu.com/p/441682100)
